@@ -7,7 +7,7 @@ and returns a TurnResult that acp_runtime.run_acp_client_turn() can splice into
 the ``messages`` list.
 
 Lifecycle:
-    session = ACPClientSession(command="claude-acp-bridge")
+    session = ACPClientSession(command="claude-agent-acp")
     session.ensure_started(cwd="/home/x/proj")      # spawns + initialize + session/new
     result = session.run_turn("hello")               # blocks until session/prompt returns
     # result.final_text          → assistant text returned to caller
@@ -25,6 +25,7 @@ from __future__ import annotations
 
 import logging
 import os
+import threading
 import time
 from dataclasses import dataclass, field
 from typing import Any, Callable, Optional
@@ -115,7 +116,7 @@ class ACPClientSession:
     ) -> None:
         """
         Args:
-            command: ACP agent binary to spawn (e.g. "claude-acp-bridge").
+            command: ACP agent binary to spawn (e.g. "claude-agent-acp").
             args: Additional arguments to pass to the command.
             env: Extra environment variables for the subprocess.
             on_delta: Optional callback invoked with each text delta during streaming.
@@ -263,7 +264,6 @@ class ACPClientSession:
             except (ACPClientError, TimeoutError, RuntimeError) as exc:
                 _error.append(exc)
 
-        import threading
         req_thread = threading.Thread(target=_do_request, daemon=True)
         req_thread.start()
 

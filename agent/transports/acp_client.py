@@ -109,6 +109,16 @@ class ACPClient:
 
     # ---------- lifecycle ----------
 
+    # Minimal capabilities Hermes declares to ACP agents.  We explicitly
+    # opt out of fs and terminal proxying because Hermes drives its own tool
+    # executor — the agent must not expect to call back into us for those.
+    # This mirrors what _handle_server_request() declines in acp_client_session.py
+    # and lets conformant agents skip their fs/terminal request flow entirely.
+    _DEFAULT_CLIENT_CAPABILITIES: dict = {
+        "fs": {"readTextFile": False, "writeTextFile": False},
+        "terminal": False,
+    }
+
     def initialize(
         self,
         client_name: str = "hermes",
@@ -120,16 +130,22 @@ class ACPClient:
 
         Returns the server's InitializeResponse dict
         (agent_info, agent_capabilities, protocol_version).
+
+        ``capabilities`` defaults to ``_DEFAULT_CLIENT_CAPABILITIES`` when not
+        supplied, explicitly advertising that Hermes does not proxy fs or
+        terminal requests to the calling client.
         """
         if self._initialized:
             raise RuntimeError("already initialized")
+        if capabilities is None:
+            capabilities = self._DEFAULT_CLIENT_CAPABILITIES
         params = {
             "protocolVersion": 1,
             "clientInfo": {
                 "name": client_name,
                 "version": client_version,
             },
-            "clientCapabilities": capabilities or {},
+            "clientCapabilities": capabilities,
         }
         result = self.request("initialize", params, timeout=timeout)
         self._initialized = True
